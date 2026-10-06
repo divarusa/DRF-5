@@ -61,3 +61,32 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def get_products_count(self, obj):
         return obj.products.count()  
+
+
+class CategoryValidateSerializer(serializers.Serializer):
+    name = serializers.CharField()
+
+
+class ProductValidateSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    description = serializers.CharField(required=False, allow_blank=True)
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
+    category_id = serializers.IntegerField(min_value=1)
+
+    def validate_category_id(self, category_id):
+        if not Category.objects.filter(id=category_id).exists():
+            raise serializers.ValidationError("Категория с таким ID не найдена.")
+        return category_id
+
+
+class ReviewValidateSerializer(serializers.Serializer):
+    text = serializers.CharField(min_length=2)
+    stars = serializers.IntegerField(min_value=1, max_value=5)
+    product_id = serializers.IntegerField(min_value=1)
+
+    def validate_product_id(self, product_id):
+        if not Product.objects.filter(id=product_id).exists():
+            raise serializers.ValidationError("Товар с таким ID не найден.")
+        return product_id
+
+
