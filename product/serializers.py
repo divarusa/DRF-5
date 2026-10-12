@@ -3,9 +3,14 @@ from .models import Category, Product, Review
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    products_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Category
-        fields = '__all__'
+        fields = ['id', 'name', 'products_count']
+
+    def get_products_count(self, obj):
+        return obj.products.count()
 
 
 class CategoryDetailSerializer(serializers.ModelSerializer):
@@ -37,6 +42,7 @@ class ReviewDetailSerializer(serializers.ModelSerializer):
         model = Review
         fields = '__all__'
 
+
 class ProductReviewsSerializer(serializers.ModelSerializer):
     reviews = ReviewSerializer(many=True, read_only=True)
     rating = serializers.SerializerMethodField()
@@ -50,17 +56,7 @@ class ProductReviewsSerializer(serializers.ModelSerializer):
         if reviews.exists():
             total_stars = sum([review.stars for review in reviews])
             return round(total_stars / reviews.count(), 2)
-        return 0.0 
-
-class CategorySerializer(serializers.ModelSerializer):
-    products_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Category
-        fields = ['id', 'name', 'products_count']
-
-    def get_products_count(self, obj):
-        return obj.products.count()  
+        return 0.0
 
 
 class CategoryValidateSerializer(serializers.Serializer):
@@ -80,13 +76,16 @@ class ProductValidateSerializer(serializers.Serializer):
 
 
 class ReviewValidateSerializer(serializers.Serializer):
-    text = serializers.CharField(min_length=2)
+    text = serializers.CharField()
     stars = serializers.IntegerField(min_value=1, max_value=5)
     product_id = serializers.IntegerField(min_value=1)
+
+    def validate_text(self, text):
+        if len(text.strip()) < 2:
+            raise serializers.ValidationError("Текст отзыва слишком короткий.")
+        return text
 
     def validate_product_id(self, product_id):
         if not Product.objects.filter(id=product_id).exists():
             raise serializers.ValidationError("Товар с таким ID не найден.")
         return product_id
-
-
