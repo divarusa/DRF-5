@@ -13,22 +13,15 @@ class CategorySerializer(serializers.ModelSerializer):
         return obj.products.count()
 
 
-class CategoryDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = '__all__'
-
-
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
 
-
-class ProductDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Product
-        fields = '__all__'
+    def validate_price(self, price):
+        if price <= 0:
+            raise serializers.ValidationError("Цена должна быть больше 0.")
+        return price
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -36,11 +29,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         model = Review
         fields = '__all__'
 
-
-class ReviewDetailSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Review
-        fields = '__all__'
+    def validate_text(self, text):
+        if len(text.strip()) < 2:
+            raise serializers.ValidationError("Текст отзыва слишком короткий.")
+        return text
 
 
 class ProductReviewsSerializer(serializers.ModelSerializer):
@@ -57,35 +49,3 @@ class ProductReviewsSerializer(serializers.ModelSerializer):
             total_stars = sum([review.stars for review in reviews])
             return round(total_stars / reviews.count(), 2)
         return 0.0
-
-
-class CategoryValidateSerializer(serializers.Serializer):
-    name = serializers.CharField()
-
-
-class ProductValidateSerializer(serializers.Serializer):
-    title = serializers.CharField()
-    description = serializers.CharField(required=False, allow_blank=True)
-    price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
-    category_id = serializers.IntegerField(min_value=1)
-
-    def validate_category_id(self, category_id):
-        if not Category.objects.filter(id=category_id).exists():
-            raise serializers.ValidationError("Категория с таким ID не найдена.")
-        return category_id
-
-
-class ReviewValidateSerializer(serializers.Serializer):
-    text = serializers.CharField()
-    stars = serializers.IntegerField(min_value=1, max_value=5)
-    product_id = serializers.IntegerField(min_value=1)
-
-    def validate_text(self, text):
-        if len(text.strip()) < 2:
-            raise serializers.ValidationError("Текст отзыва слишком короткий.")
-        return text
-
-    def validate_product_id(self, product_id):
-        if not Product.objects.filter(id=product_id).exists():
-            raise serializers.ValidationError("Товар с таким ID не найден.")
-        return product_id
